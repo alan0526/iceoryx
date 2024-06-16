@@ -13,6 +13,8 @@
 // limitations under the License.
 //
 // SPDX-License-Identifier: Apache-2.0
+#include <BS_thread_pool.hpp>
+static inline BS::thread_pool thread_pool{};
 
 #include "iceoryx_posh/popo/listener.hpp"
 #include "iox/assertions.hpp"
@@ -21,14 +23,15 @@ namespace iox
 {
 namespace popo
 {
-Listener::Listener() noexcept
-    : Listener(*runtime::PoshRuntime::getInstance().getMiddlewareConditionVariable())
+Listener::Listener(bool use_thread_pool) noexcept
+    : Listener(*runtime::PoshRuntime::getInstance().getMiddlewareConditionVariable(), use_thread_pool)
 {
 }
 
-Listener::Listener(ConditionVariableData& conditionVariable) noexcept
+Listener::Listener(ConditionVariableData& conditionVariable, bool use_thread_pool) noexcept
     : m_conditionVariableData(&conditionVariable)
     , m_conditionListener(conditionVariable)
+    , m_use_thread_pool(use_thread_pool)
 {
     m_thread = std::thread(&Listener::threadLoop, this);
 }
@@ -49,13 +52,20 @@ uint64_t Listener::size() const noexcept
 
 void Listener::threadLoop() noexcept
 {
-    while (m_wasDtorCalled.load(std::memory_order_relaxed) == false)
-    {
-        auto activateNotificationIds = m_conditionListener.wait();
-
-        for (auto& id : activateNotificationIds)
-        {
-            m_events[id]->executeCallback();
+    if (m_use_thread_pool) {
+        while (m_wasDtorCalled.load(std::memory_order_relaxed) == false) {
+            auto activateNotificationIds = m_conditionListener.wait();
+            for (auto& id : activateNotificationIds) {
+                thread_pool.detach_task([&]() { m_events[id]->executeCallback(); });
+            }
+        }
+    }
+    else {
+        while (m_wasDtorCalled.load(std::memory_order_relaxed) == false) {
+            auto activateNotificationIds = m_conditionListener.wait();
+            for (auto& id : activateNotificationIds) {
+                m_events[id]->executeCallback();
+            }
         }
     }
 }

@@ -101,7 +101,7 @@ enum class ListenerError
 class Listener
 {
   public:
-    Listener() noexcept;
+    Listener(bool use_thread_pool = false) noexcept;
     Listener(const Listener&) = delete;
     Listener(Listener&&) = delete;
     ~Listener() noexcept;
@@ -167,7 +167,7 @@ class Listener
     uint64_t size() const noexcept;
 
   protected:
-    Listener(ConditionVariableData& conditionVariableData) noexcept;
+    Listener(ConditionVariableData& conditionVariableData, bool use_thread_pool) noexcept;
 
   private:
     class Event_t;
@@ -214,6 +214,7 @@ class Listener
     std::atomic_bool m_wasDtorCalled{false};
     ConditionVariableData* m_conditionVariableData = nullptr;
     ConditionListener m_conditionListener;
+    bool m_use_thread_pool{false};
 };
 
 } // namespace popo

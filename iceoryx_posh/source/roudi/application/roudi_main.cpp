@@ -39,6 +39,8 @@ int main(int argc, char* argv[]) noexcept
         return EXIT_SUCCESS;
     }
 
+    cmdLineArgs->configFilePath = "etc/iceoryx/roudi_config.toml";
+
     iox::config::TomlRouDiConfigFileProvider configFileProvider(cmdLineArgs.value());
 
     auto config = configFileProvider.parse();
